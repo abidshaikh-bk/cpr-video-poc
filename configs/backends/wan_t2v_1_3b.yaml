@@ -6,7 +6,8 @@ variant: null
 scheduler: default
 load:
   vae_dtype: float32
-  pipeline_dtype: bfloat16
+  pipeline_dtype: float16
+  low_cpu_mem_usage: true
   enable_cpu_offload: true
   enable_vae_slicing: true
   enable_vae_tiling: true

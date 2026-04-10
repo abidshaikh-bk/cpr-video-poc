@@ -10,9 +10,23 @@ from cpr_video_poc.utils.seed import build_torch_generator
 logger = logging.getLogger(__name__)
 
 
+def _cuda_bf16_supported(torch_module: Any) -> bool:
+    if not torch_module.cuda.is_available():
+        return False
+    is_bf16_supported = getattr(torch_module.cuda, "is_bf16_supported", None)
+    if callable(is_bf16_supported):
+        return bool(is_bf16_supported())
+    return False
+
+
 def _resolve_torch_dtype(torch_module: Any, dtype_name: str) -> Any:
     if not hasattr(torch_module, dtype_name):
         raise ValueError(f"Unsupported torch dtype: {dtype_name}")
+    if dtype_name == "bfloat16" and torch_module.cuda.is_available() and not _cuda_bf16_supported(torch_module):
+        logger.warning(
+            "Requested bfloat16, but this CUDA device does not report BF16 support. Falling back to float16."
+        )
+        return torch_module.float16
     dtype = getattr(torch_module, dtype_name)
     if not torch_module.cuda.is_available() and dtype_name in {"float16", "bfloat16"}:
         return torch_module.float32
@@ -36,10 +50,11 @@ class WanT2VBackend(BaseBackend):
         vae_dtype = _resolve_torch_dtype(torch, str(load_cfg.get("vae_dtype", "float32")))
         pipe_dtype = _resolve_torch_dtype(
             torch,
-            str(load_cfg.get("pipeline_dtype", "bfloat16")),
+            str(load_cfg.get("pipeline_dtype", "float16")),
         )
         revision = self.config.get("model_revision")
         variant = self.config.get("variant")
+        low_cpu_mem_usage = bool(load_cfg.get("low_cpu_mem_usage", True))
 
         logger.info("Loading Wan backend: %s", self.model_id)
         vae = AutoencoderKLWan.from_pretrained(
@@ -47,6 +62,7 @@ class WanT2VBackend(BaseBackend):
             subfolder="vae",
             torch_dtype=vae_dtype,
             revision=revision,
+            low_cpu_mem_usage=low_cpu_mem_usage,
         )
         self.pipe = WanPipeline.from_pretrained(
             self.model_id,
@@ -55,6 +71,7 @@ class WanT2VBackend(BaseBackend):
             use_safetensors=bool(load_cfg.get("use_safetensors", True)),
             revision=revision,
             variant=variant,
+            low_cpu_mem_usage=low_cpu_mem_usage,
         )
 
         if bool(load_cfg.get("enable_vae_slicing", True)):
@@ -115,7 +132,9 @@ class WanT2VBackend(BaseBackend):
             "guidance_scale": request.guidance_scale,
             "seed": request.seed,
             "fps": request.fps,
-            "dtype": self.config.get("load", {}).get("pipeline_dtype", "bfloat16"),
+            "dtype": str(self.pipe.transformer.dtype).replace("torch.", "")
+            if getattr(self.pipe, "transformer", None) is not None
+            else self.config.get("load", {}).get("pipeline_dtype", "float16"),
         }
         return GenerationResult(
             frames=frames,
