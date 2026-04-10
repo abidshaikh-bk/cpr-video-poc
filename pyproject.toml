@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cpr-video-poc"
+version = "0.1.0"
+description = "Config-driven CPR training text-to-video diffusion POC"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "OpenAI" }]
+dependencies = [
+  "accelerate>=1.1.0",
+  "diffusers>=0.35.0",
+  "ftfy>=6.3.1",
+  "huggingface_hub>=0.26.0",
+  "imageio>=2.36.0",
+  "imageio-ffmpeg>=0.5.1",
+  "numpy>=1.26.0",
+  "Pillow>=10.4.0",
+  "PyYAML>=6.0.2",
+  "sentencepiece>=0.2.0",
+  "torch>=2.4.0",
+  "torchvision>=0.19.0",
+  "transformers>=4.46.0",
+]
+
+[project.scripts]
+cpr-video-poc = "cpr_video_poc.cli.main:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3.0"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

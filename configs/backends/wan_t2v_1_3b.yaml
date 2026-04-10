@@ -1,0 +1,24 @@
+name: wan_t2v_1_3b
+backend_type: wan_t2v
+model_id: Wan-AI/Wan2.1-T2V-1.3B-Diffusers
+model_revision: main
+variant: null
+scheduler: default
+load:
+  vae_dtype: float32
+  pipeline_dtype: bfloat16
+  enable_cpu_offload: true
+  enable_vae_slicing: true
+  enable_vae_tiling: true
+  enable_attention_slicing: false
+  output_type: np
+  disable_progress_bar: false
+  use_safetensors: true
+  device: cuda
+limits:
+  supported_heights: [480]
+  supported_widths: [832]
+  default_num_frames: 49
+notes:
+  - Primary low-memory backend for Colab
+  - Uses Diffusers WanPipeline abstraction
