@@ -8,6 +8,7 @@ from typing import Any
 from cpr_video_poc.backends import WanT2VBackend  # noqa: F401
 from cpr_video_poc.backends.base import GenerationRequest
 from cpr_video_poc.backends.registry import create_backend
+from cpr_video_poc.backends.selector import resolve_backend_selection
 from cpr_video_poc.logging_utils import configure_logging
 from cpr_video_poc.pipeline.prompt_builder import build_prompts
 from cpr_video_poc.pipeline.prompt_parser import parse_prompt
@@ -84,8 +85,9 @@ def run_generation_with_settings(
     final_seed = resolve_seed(seed)
     seed_everything(final_seed)
 
-    backend_name = generation_cfg["backend"]
-    backend = create_backend(backend_name, settings.backend)
+    selection = resolve_backend_selection(settings)
+    backend_name = selection.selected_backend
+    backend = create_backend(backend_name, selection.backend_config)
     request = GenerationRequest(
         prompt=prompt_bundle["prompt"],
         negative_prompt=prompt_bundle["negative_prompt"],
@@ -99,7 +101,7 @@ def run_generation_with_settings(
         extra={
             "raw_prompt": prompt,
             "backend_name": backend_name,
-            "output_type": settings.backend.get("load", {}).get("output_type", "np"),
+            "output_type": selection.backend_config.get("load", {}).get("output_type", "np"),
         },
     )
 
@@ -112,7 +114,17 @@ def run_generation_with_settings(
             request=request,
             settings=settings,
             backend_metadata=result.metadata,
-            extra_metadata=extra_metadata,
+            extra_metadata={
+                **(extra_metadata or {}),
+                "backend_selection": {
+                    "requested_backend": selection.requested_backend,
+                    "selected_backend": selection.selected_backend,
+                    "fallback_used": selection.fallback_used,
+                    "reason": selection.reason,
+                    "backend_config_path": str(selection.backend_config_path),
+                    "capabilities": selection.capabilities,
+                },
+            },
         )
         saved = save_run_artifacts(
             run_root=Path(artifact_root_override).resolve()
@@ -136,6 +148,9 @@ def run_generation_with_settings(
             "video_path": str(saved["video"]),
             "preview_gif_path": str(saved.get("preview_gif", "")),
             "seed": final_seed,
+            "requested_backend": selection.requested_backend,
+            "selected_backend": selection.selected_backend,
+            "backend_fallback_used": selection.fallback_used,
             "parsed_prompt": parsed,
             "final_prompt": prompt_bundle["prompt"],
             "negative_prompt": prompt_bundle["negative_prompt"],

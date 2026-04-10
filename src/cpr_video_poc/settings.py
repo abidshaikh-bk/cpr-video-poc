@@ -111,7 +111,22 @@ def _validate_backend_config(backend: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Backend config must define 'model_id'")
     backend["model_id"] = str(backend["model_id"])
     backend["load"] = _expect_mapping(backend.get("load", {}), "backend.load")
+    backend["requirements"] = _expect_mapping(
+        backend.get("requirements", {}),
+        "backend.requirements",
+    )
     return backend
+
+
+def load_backend_config(
+    backend_name: str,
+    backend_config_path: str | Path | None = None,
+) -> tuple[dict[str, Any], Path]:
+    backend_path = Path(
+        backend_config_path or CONFIGS_DIR / "backends" / f"{backend_name}.yaml"
+    ).resolve()
+    backend = _validate_backend_config(load_yaml(backend_path))
+    return backend, backend_path
 
 
 def load_settings(
@@ -121,10 +136,7 @@ def load_settings(
     project_path = Path(project_config_path or CONFIGS_DIR / "project.yaml").resolve()
     project = _validate_project_config(load_yaml(project_path))
     backend_name = project.get("generation", {}).get("backend", "wan_t2v_1_3b")
-    backend_path = Path(
-        backend_config_path or CONFIGS_DIR / "backends" / f"{backend_name}.yaml"
-    ).resolve()
-    backend = _validate_backend_config(load_yaml(backend_path))
+    backend, backend_path = load_backend_config(backend_name, backend_config_path)
     return Settings(
         project=project,
         backend=backend,
