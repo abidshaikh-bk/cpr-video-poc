@@ -1,14 +1,18 @@
 import pytest
 
 from cpr_video_poc.backends.registry import create_backend, registered_backends
+from cpr_video_poc.backends.mock_t2v import MockT2VBackend
 from cpr_video_poc.backends.wan_t2v import WanT2VBackend
 
 
 
 def test_backend_registry_contains_wan_backend():
     assert "wan_t2v_1_3b" in registered_backends()
+    assert "mock_t2v" in registered_backends()
     backend = create_backend("wan_t2v_1_3b", {"model_id": "test-model"})
     assert isinstance(backend, WanT2VBackend)
+    mock_backend = create_backend("mock_t2v", {"model_id": "mock"})
+    assert isinstance(mock_backend, MockT2VBackend)
 
 
 def test_create_backend_raises_for_unknown_backend():

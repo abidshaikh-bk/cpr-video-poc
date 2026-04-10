@@ -7,6 +7,11 @@ The repo now supports two execution modes:
 - direct local generation for debugging
 - controller/worker orchestration where you submit jobs locally and execute them on Google Colab through a shared storage root
 
+It also supports backend fallback:
+
+- preferred backend: `wan_t2v_1_3b`
+- safe fallback backend: `mock_t2v`
+
 That shared-root design keeps the core pipeline infra-independent, so later you can replace Colab with a rented GPU box without rewriting the generation code.
 
 ## Current backend
@@ -21,7 +26,7 @@ The implementation uses `diffusers.WanPipeline` with memory-aware loading patter
 local machine
 -> submit job into shared root
 -> Colab worker polls shared root
--> worker runs Wan generation on T4
+-> worker selects the strongest backend the infra can support
 -> artifacts/status/metadata are written back into shared root
 -> local machine sees updates through the same synced folder
 ```
@@ -112,6 +117,8 @@ python -m cpr_video_poc.cli.main worker \
   --shared-root "/content/drive/MyDrive/cpr-video-poc-shared"
 ```
 
+If the Colab VM does not satisfy the Wan backend requirements, the worker will fall back to `mock_t2v` instead of crashing mid-load.
+
 ### 5. Check job status locally
 
 ```bash
@@ -162,6 +169,7 @@ The shipped defaults target a short Colab-friendly clip:
 - steps: `30`
 - guidance scale: `5.0`
 - fps: `8`
+- fallback backend: `mock_t2v`
 
 ## Resume behavior
 
@@ -178,6 +186,8 @@ True mid-run resume would require saving diffusion latents and scheduler state d
 ## Colab notes
 
 This repo avoids hardcoded Colab paths in the core library. Only the notebook and worker invocation need a Colab-specific shared-root path.
+
+`wan_t2v_1_3b` now declares minimum infra requirements. If the worker detects weaker infra, the pipeline stays operational by selecting `mock_t2v`, which produces deterministic placeholder videos and validates the full job, artifact, and storage flow without loading a heavy model.
 
 The same controller/worker flow can later be moved to another GPU host by changing:
 

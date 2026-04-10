@@ -16,6 +16,9 @@ load:
   disable_progress_bar: false
   use_safetensors: true
   device: cuda
+requirements:
+  min_system_ram_gb: 16
+  requires_cuda: false
 limits:
   supported_heights: [480]
   supported_widths: [832]

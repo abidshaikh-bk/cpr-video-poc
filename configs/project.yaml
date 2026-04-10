@@ -3,6 +3,7 @@ artifact_root: ./runs
 
 generation:
   backend: wan_t2v_1_3b
+  fallback_backend: mock_t2v
   num_frames: 21
   height: 480
   width: 832

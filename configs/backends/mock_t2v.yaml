@@ -1,0 +1,9 @@
+name: mock_t2v
+backend_type: mock_t2v
+model_id: mock/mock-t2v
+load: {}
+requirements:
+  min_system_ram_gb: 0
+notes:
+  - Deterministic synthetic video backend for pipeline validation
+  - Safe fallback when diffusion backends are unsupported on the current infra
